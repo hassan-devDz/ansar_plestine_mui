@@ -17,6 +17,30 @@ const VALIDATION_MESSAGES = {
   FILE_FORMAT_UNSUPPORTED: "صيغة الملف غير مدعومة",
   FILE_REQUIRED: "يجب رفع ملف واحد على الأقل",
   TERMS_AGREEMENT_REQUIRED: "يجب الموافقة على الشروط وسياسة الخصوصية",
+  NUMBER_OF_SHOHADA_REQUIRED: "عدد الشهداء مطلوب",
+  NUMBER_OF_SHOHADA_INVALID: "عدد الشهداء غير صالح",
+  NUMBER_OF_SHOHADA_WOMEN_INVALID:
+    "عدد النساء من بين الشهداء يجب أن يكون رقمًا",
+  NUMBER_OF_SHOHADA_WOMEN_REQUIRED: "عدد النساء من بين الشهداء مطلوب",
+  NUMBER_OF_SHOHADA_CHILDREN_INVALID:
+    "عدد الأطفال من بين الشهداء يجب أن يكون رقمًا",
+  NUMBER_OF_SHOHADA_CHILDREN_REQUIRED: "عدد الأطفال من بين الشهداء مطلوب",
+  TOTAL_SHOHADA_CHECK:
+    "مجموع عدد النساء والأطفال يجب ألا يتجاوز العدد الإجمالي للشهداء",
+
+  NUMBER_OF_INJURED_REQUIRED: "عدد الجرحى مطلوب",
+  NUMBER_OF_INJURED_INVALID: "عدد الجرحى غير صالح",
+  NUMBER_OF_INJURED_WOMEN_INVALID: "عدد النساء من بين الجرحى يجب أن يكون رقمًا",
+  NUMBER_OF_INJURED_WOMEN_REQUIRED: "عدد النساء من بين الجرحى مطلوب",
+  NUMBER_OF_INJURED_CHILDREN_INVALID:
+    "عدد الأطفال من بين الجرحى يجب أن يكون رقمًا",
+  NUMBER_OF_INJURED_CHILDREN_REQUIRED: "عدد الأطفال من بين الجرحى مطلوب",
+  TOTAL_INJURED_CHECK:
+    "مجموع عدد النساء والأطفال يجب ألا يتجاوز العدد الإجمالي للجرحى",
+  NUMBER_OF_DISPLACED_REQUIRED: "عدد النازحين/المهجرين مطلوب",
+  NUMBER_OF_DISPLACED_INVALID: "عدد النازحين/المهجرين غير صالح",
+
+  STATISTICS_REQUIRED:"نوع الاحصائية مطلوب",
   // أي رسائل أخرى حسب الحاجة
 };
 // أي ثوابت أخرى متعلقة بالفورم
