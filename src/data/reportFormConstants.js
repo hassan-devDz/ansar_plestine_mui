@@ -48,7 +48,6 @@ const VALIDATION_MESSAGES = {
 const SUPPORTED_FORMATS = [
   "image/jpg",
   "image/jpeg",
-  "image/gif",
   "image/png",
   "video/mp4",
   "video/mpeg",

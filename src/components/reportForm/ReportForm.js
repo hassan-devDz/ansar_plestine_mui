@@ -21,7 +21,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import Link from "next/link";
-import { createValidationSchema } from "@/validation/ValidationSchema";
+import { createValidationSchema, schema } from "@/validation/ValidationSchema";
 import {
   CRIMES,
   SUPPORTED_FORMATS,
@@ -39,6 +39,71 @@ import DatePickerField from "./DatePickerField";
 import CheckboxField from "./CheckboxField";
 import "dayjs/locale/ar";
 import Grid from "@mui/material/Unstable_Grid2";
+
+function getFormData(obj = {}, formData = new FormData(), key = "") {
+  if (![Array, File,Date, Object].includes(obj.constructor)) {
+    return formData;
+  }
+
+  // Handle File
+  if (obj instanceof File) {
+    formData.append(key, obj);
+    return formData;
+  }
+
+  for (const prop in obj) {
+    
+    if (
+      obj[prop] &&
+      ![String, Number, Boolean,Date, Array, Object, File, FileList].includes(
+        obj[prop].constructor
+      )
+    ) {
+      continue;
+    }
+
+    const deepKey = key ? key + `[${prop}]` : prop;
+    console.log(obj[prop],deepKey,typeof obj[prop],obj[prop] instanceof Date)
+    if (obj[prop] instanceof FileList) {
+      for (let i = 0; i < obj[prop].length; i++) {
+        formData.append(`${deepKey}`, obj[prop][i]);
+      }
+      continue;
+    }
+    if(obj[prop] instanceof Date){
+      formData.append(`${deepKey}`,obj[prop] );
+    }
+   // Handle array
+    if (Array.isArray(obj[prop])) {
+      const arrayValue = obj[prop]
+        .map((item) => {
+          return item instanceof File
+            ? item
+            : item === undefined || item === null
+            ? ""
+            : item.toString();
+        })
+        .join(",");
+      formData.append(deepKey, arrayValue);
+      continue;
+    }
+
+    // Handle object
+    if (typeof obj[prop] === "object" && obj[prop] !== null ) {
+      getFormData(obj[prop], formData, deepKey);
+    }
+     else {
+      // Handle string, number, boolean
+      formData.append(
+        deepKey,
+        [undefined, null].includes(obj[prop]) ? "" : obj[prop]
+      );
+    }
+  }
+
+  return formData;
+}
+
 export default function ReportForm() {
   const validationSchema = createValidationSchema();
   const [filePreviews, setFilePreviews] = useState([]);
@@ -50,7 +115,7 @@ export default function ReportForm() {
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(validationSchema),
+    resolver: yupResolver(schema),
     defaultValues: {
       hasCasualties: "no", // تعيين القيمة الافتراضية لـ hasCasualties
       victims: { typeOfStatistic: null },
@@ -62,9 +127,66 @@ export default function ReportForm() {
   const [pageloading, setpageLoding] = useState(false);
 
   const [sendData, setSendData] = useState(false);
-  function onSubmit(data) {
-    setSubmitData(data);
-    recaptchaRef.current.execute();
+  async function onSubmit(data) {
+    // setSubmitData(data);
+    // recaptchaRef.current.execute();
+   
+    
+    setpageLoding(true);
+    const formData = getFormData(data)
+    
+    //  for (let pair of formData.entries()) {
+    //   console.log(pair[0] + ", " + pair[1]);
+    // }
+    function formDataToObject(form) {
+      const obj = {};
+      for (const [key, value] of form.entries()) {
+        const keys = key.replace(/\]/g, "").split("[");
+
+        keys.reduce((acc, currentKey, index) => {
+          if (index === keys.length - 1) {
+            if (acc[currentKey]) {
+              if (!Array.isArray(acc[currentKey])) {
+                acc[currentKey] = [acc[currentKey]];
+              }
+              acc[currentKey].push(value);
+            } else {
+              acc[currentKey] = value;
+            }
+          } else {
+            acc[currentKey] = acc[currentKey] || {};
+          }
+          return acc[currentKey];
+        }, obj);
+      }
+      return obj;
+    }
+    console.log(formData,data,formDataToObject(formData));
+
+
+    
+    try {
+      const response = await axios.post(`/report-crime/api`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // إظهار رسالة نجاح أو إجراء تحويلات
+      if (response.data) {
+        setpageLoding(false);
+        setSendData(true);
+        //reset();
+      }
+      if (!response.data) {
+        setpageLoding(false);
+        throw new Error("Failed to submit form data");
+      }
+    } catch (error) {
+      setpageLoding(false);
+      console.error("Error submitting form data:", error);
+      // إظهار رسالة خطأ
+    }
 
     // الآن يمكنك التعامل مع بيانات النموذج
   }
@@ -88,30 +210,38 @@ export default function ReportForm() {
       for (const file of data.files) {
         formData.append("files", file);
       }
-    //   for (let i = 0; i < data.files.length; i++) {
-    //   formData.append(data.files[i].name, data.files[i]);
-    // }
+      //   for (let i = 0; i < data.files.length; i++) {
+      //   formData.append(data.files[i].name, data.files[i]);
+      // }
     }
-    
+    console.log(formData);
 
     try {
-
-      const response = await axios.post(`${process.env.HOST_NAME}uploads`, formData, {
+      const response = await fetch(`localhost:5000/uploads`, {
+        method: "POST",
         headers: {
           "Content-Type": "multipart/form-data",
         },
+
+        body: formData,
       });
-      console.log("Response:", response.data,formData);
+
+      // التحقق من نجاح الطلب
+      if (!response.ok) {
+        setpageLoding(false);
+        throw new Error(
+          `Failed to submit form data. Status: ${response.status}`
+        );
+      }
+
+      // قراءة البيانات من الاستجابة
+      const responseData = await response.json();
 
       // إظهار رسالة نجاح أو إجراء تحويلات
-      if (response.data) {
+      if (responseData) {
         setpageLoding(false);
         setSendData(true);
         reset();
-      }
-      if (!response.data) {
-        setpageLoding(false);
-        throw new Error("Failed to submit form data");
       }
     } catch (error) {
       setpageLoding(false);
@@ -173,17 +303,6 @@ export default function ReportForm() {
 
   return (
     <Container sx={{ mt: 1 }}>
-      <Button
-        onClick={() =>
-          console.log(
-            process.env.RECAPTCHA_SECRET_KEY,
-            process.env.HOST_NAME,
-            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-          )
-        }
-      >
-        click
-      </Button>
       <Grid
         container
         spacing={2}
