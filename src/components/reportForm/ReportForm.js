@@ -21,7 +21,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import Link from "next/link";
-import { createValidationSchema, schema } from "@/validation/ValidationSchema";
+import { schema } from "@/validation/ValidationSchema";
 import {
   CRIMES,
   SUPPORTED_FORMATS,
@@ -40,46 +40,71 @@ import CheckboxField from "./CheckboxField";
 import "dayjs/locale/ar";
 import Grid from "@mui/material/Unstable_Grid2";
 
+/**
+ * تحويل كائن JavaScript إلى كائن FormData
+ * @param {Object} obj - الكائن الذي يجب تحويله إلى FormData
+ * @param {FormData} formData - كائن FormData يتم تحديثه خلال عملية التحويل
+ * @param {string} key - المفتاح الحالي (يستخدم لتكوين الأسماء في FormData)
+ * @returns {FormData} - كائن FormData بعد التحويل
+ */
 function getFormData(obj = {}, formData = new FormData(), key = "") {
-  if (![Array, File,Date, Object].includes(obj.constructor)) {
+  // التحقق مما إذا كان نوع الكائن غير قابل للتحويل
+  if (![Array, File, Date, Object].includes(obj.constructor)) {
     return formData;
   }
 
-  // Handle File
+  // التعامل مع نوع الملف
   if (obj instanceof File) {
     formData.append(key, obj);
-    return formData;
+    
   }
 
+  // الدخول في حلقة لمعالجة الخصائص
   for (const prop in obj) {
-    
+    // التحقق من نوع القيمة وتجنب أنواع غير صالحة
     if (
       obj[prop] &&
-      ![String, Number, Boolean,Date, Array, Object, File, FileList].includes(
+      ![String, Number, Boolean, Date, Array, Object, File, FileList].includes(
         obj[prop].constructor
       )
     ) {
       continue;
     }
 
+    // تكوين المفتاح العميق
     const deepKey = key ? key + `[${prop}]` : prop;
-    console.log(obj[prop],deepKey,typeof obj[prop],obj[prop] instanceof Date)
-    if (obj[prop] instanceof FileList) {
+
+    // التعامل مع نوع FileList
+    if (obj[prop] instanceof FileList ) {
       for (let i = 0; i < obj[prop].length; i++) {
         formData.append(`${deepKey}`, obj[prop][i]);
       }
       continue;
     }
-    if(obj[prop] instanceof Date){
-      formData.append(`${deepKey}`,obj[prop] );
+
+    // التعامل مع نوع Date
+    if (obj[prop] instanceof Date) {
+      formData.append(`${deepKey}`, obj[prop]);
+      continue;
     }
-   // Handle array
-    if (Array.isArray(obj[prop])) {
+    if(Array.isArray(obj[prop]) && obj[prop].some((item) =>  item instanceof File)){
+      for (let i = 0; i < obj[prop].length; i++) {
+        formData.append(`${deepKey}`, obj[prop][i]);
+      }
+      continue;
+    }
+
+    // التعامل مع مصفوفة
+    if (Array.isArray(obj[prop]) && !(obj[prop].some((item) =>  item instanceof File))) {
+      console.log(obj[prop] instanceof File,);
+      // if (item instanceof File) {
+      //       formData.append(deepKey, item);
+      //     }
       const arrayValue = obj[prop]
         .map((item) => {
-          return item instanceof File
-            ? item
-            : item === undefined || item === null
+          
+          console.log(item instanceof File,typeof item);
+          return  item === undefined || item === null
             ? ""
             : item.toString();
         })
@@ -88,12 +113,11 @@ function getFormData(obj = {}, formData = new FormData(), key = "") {
       continue;
     }
 
-    // Handle object
-    if (typeof obj[prop] === "object" && obj[prop] !== null ) {
+    // التعامل مع كائن
+    if (typeof obj[prop] === "object" && obj[prop] !== null) {
       getFormData(obj[prop], formData, deepKey);
-    }
-     else {
-      // Handle string, number, boolean
+    } else {
+      // التعامل مع string, number, boolean
       formData.append(
         deepKey,
         [undefined, null].includes(obj[prop]) ? "" : obj[prop]
@@ -104,8 +128,8 @@ function getFormData(obj = {}, formData = new FormData(), key = "") {
   return formData;
 }
 
+
 export default function ReportForm() {
-  const validationSchema = createValidationSchema();
   const [filePreviews, setFilePreviews] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const {
@@ -134,34 +158,9 @@ export default function ReportForm() {
     
     setpageLoding(true);
     const formData = getFormData(data)
+    console.log(data,formData);
+   
     
-    //  for (let pair of formData.entries()) {
-    //   console.log(pair[0] + ", " + pair[1]);
-    // }
-    function formDataToObject(form) {
-      const obj = {};
-      for (const [key, value] of form.entries()) {
-        const keys = key.replace(/\]/g, "").split("[");
-
-        keys.reduce((acc, currentKey, index) => {
-          if (index === keys.length - 1) {
-            if (acc[currentKey]) {
-              if (!Array.isArray(acc[currentKey])) {
-                acc[currentKey] = [acc[currentKey]];
-              }
-              acc[currentKey].push(value);
-            } else {
-              acc[currentKey] = value;
-            }
-          } else {
-            acc[currentKey] = acc[currentKey] || {};
-          }
-          return acc[currentKey];
-        }, obj);
-      }
-      return obj;
-    }
-    console.log(formData,data,formDataToObject(formData));
 
 
     
@@ -274,7 +273,7 @@ export default function ReportForm() {
     newPreviews.splice(index, 1);
     setFilePreviews(newPreviews);
 
-    const newSelectedFiles = [...selectedFiles];
+    const newSelectedFiles =  [...selectedFiles];
     newSelectedFiles.splice(index, 1);
     setSelectedFiles(newSelectedFiles);
 
