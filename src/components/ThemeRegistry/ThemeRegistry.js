@@ -8,7 +8,9 @@ import theme from './theme';
 import { prefixer } from 'stylis';
 export default function ThemeRegistry({ children }) {
   return (
-    <NextAppDirEmotionCacheProvider options={{ key: 'mui' ,  stylisPlugins: [prefixer, rtlPlugin],}}>
+    <NextAppDirEmotionCacheProvider
+      options={{ key: "ansar-plestine", stylisPlugins: [prefixer, rtlPlugin] }}
+    >
       <ThemeProvider theme={theme}>
         {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
         <CssBaseline />
