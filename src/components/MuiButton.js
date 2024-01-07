@@ -3,6 +3,7 @@ import Button from "@mui/material/Button";
 import Link from "next/link";
 const MuiButton = ({
   children,
+  width = "50%",
   maxWidth = 176,
   component = Link,
   href = "#",
@@ -17,7 +18,7 @@ const MuiButton = ({
       sx={{
         fontSize: "1.125rem",
         color: "grey.100",
-        width: "50%",
+        width: width,
         maxWidth: maxWidth,
         py: 1.5,
         px: 0,

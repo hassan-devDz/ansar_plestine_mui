@@ -1,5 +1,7 @@
 // ReportFormConstants.js
-const VALIDATION_MESSAGES = {
+const VALIDATION_MESSAGES = {  
+  SUBJECT_REQUIRED:"موضوع الرسالة مطلوب",
+  MESSAGE_BODY_REQUIRED:"نص الرسالة مطلوب",
   NAME_REQUIRED: "الاسم مطلوب",
   ADDRESS_REQUIRED: "العنوان مطلوب",
   PHONE_REQUIRED: "رقم الهاتف مطلوب",

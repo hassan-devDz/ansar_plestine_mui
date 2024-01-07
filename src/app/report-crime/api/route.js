@@ -85,7 +85,7 @@ const router = createEdgeRouter();
 router.use(validateFormData).post(async (req, res) => {
   return NextResponse.json(
     {
-      message: "User has been created",
+      message: "تم الارسال بنجاح ، شكرا لك.",
     },
     { status: 201 }
   );

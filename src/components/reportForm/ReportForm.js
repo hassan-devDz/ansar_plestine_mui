@@ -39,6 +39,7 @@ import DatePickerField from "./DatePickerField";
 import CheckboxField from "./CheckboxField";
 import "dayjs/locale/ar";
 import Grid from "@mui/material/Unstable_Grid2";
+import theme from "../ThemeRegistry/theme";
 
 /**
  * تحويل كائن JavaScript إلى كائن FormData
@@ -131,12 +132,17 @@ function getFormData(obj = {}, formData = new FormData(), key = "") {
 
 export default function ReportForm() {
   const [filePreviews, setFilePreviews] = useState([]);
+  
   const [selectedFiles, setSelectedFiles] = useState([]);
   const {
     control,
     watch,
     handleSubmit,
     setValue,
+    reset,
+    getValues,
+   
+   
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
@@ -145,6 +151,7 @@ export default function ReportForm() {
       victims: { typeOfStatistic: null },
     },
   });
+  console.log(errors[""]);
   const hasCasualties = watch("hasCasualties");
   const recaptchaRef = useRef(null);
   const [submitData, setSubmitData] = useState("");
@@ -157,20 +164,56 @@ export default function ReportForm() {
    
     
     setpageLoding(true);
-    const formData = getFormData(data)
+    const formData = await getFormData(data)
     console.log(data,formData);
    
     
 
 
-    
-    try {
-      const response = await axios.post(`/report-crime/api`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+    // try {
+    //   const response = await fetch("https://media.benhanatamer.com/uploads/", {
+    //     method: "POST",
+    //     body: formData,
+    //     headers: {
+    //       // إذا كنت بحاجة لإرسال رؤوس الطلب، يمكنك إضافتها هنا
+    //       "Content-Type": "multipart/form-data"
+    //     },
+    //   });
 
+    //   if (response.ok) {
+    //     const responseData = await response.json();
+    //     // إظهار رسالة نجاح أو إجراء تحويلات
+    //     if (responseData) {
+    //       setpageLoding(false);
+    //       setSendData(true);
+    //       //reset();
+    //     } else {
+    //       setpageLoding(false);
+    //       throw new Error("Failed to submit form data");
+    //     }
+    //   } else {
+    //     setpageLoding(false);
+    //     throw new Error(`Request failed with status: ${response.status}`);
+    //   }
+    // } catch (error) {
+    //   setpageLoding(false);
+    //   console.error("Error submitting form data:", error);
+    //   // إظهار رسالة خطأ
+    // }
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/uploads",
+        formData,
+        {
+          headers: {
+            // "Access-Control-Allow-Origin": "*",
+
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+console.log(response);
       // إظهار رسالة نجاح أو إجراء تحويلات
       if (response.data) {
         setpageLoding(false);
@@ -179,6 +222,7 @@ export default function ReportForm() {
       }
       if (!response.data) {
         setpageLoding(false);
+        console.log(response);
         throw new Error("Failed to submit form data");
       }
     } catch (error) {
@@ -187,7 +231,6 @@ export default function ReportForm() {
       // إظهار رسالة خطأ
     }
 
-    // الآن يمكنك التعامل مع بيانات النموذج
   }
 
   async function onReCAPTCHAChange(captchaCode) {
@@ -248,31 +291,58 @@ export default function ReportForm() {
       // إظهار رسالة خطأ
     }
   }
-  useEffect(() => {
-    if (hasCasualties === "no") {
-      setValue("victims.typeOfStatistic", null);
-    } else {
-      setValue("victims.typeOfStatistic", "دقيقة");
-    }
-  }, [hasCasualties, setValue]);
+ useEffect(() => {
+   if (hasCasualties === "no") {
+     reset({
+       ...getValues(), // الحفاظ على القيم الحالية للنموذج
+       victims: {
+         typeOfStatistic: null,
+         numberOfShohada: { total: 0, women: 0, children: 0 },
+         numberOfInjured: { total: 0, women: 0, children: 0 },
+         numberOfDisplaced: 0,
+       },
+     });
+   } else {
+     setValue("victims.typeOfStatistic", "دقيقة");
+   }
+   
+ }, [hasCasualties, reset, setValue, getValues]);
+
+
+
+
   function handleFileChange(event) {
     const files = event.target.files;
     const newSelectedFiles = Array.from(files);
-
+    const sources = Array.from(files, (file) => ({
+      src: URL.createObjectURL(file),
+      type: file.type,
+      alt: file.name.split(".")[0],
+    }));
     const previews = newSelectedFiles.map((file) => ({
       src: URL.createObjectURL(file),
       type: file.type,
       alt: file.name.split(".")[0],
     }));
-
     setFilePreviews(previews);
     setSelectedFiles(newSelectedFiles);
+     
+
+   console.log(selectedFiles,filePreviews);
+      // إضافة كود لعرض ملفات الفيديو
+  // const videoElement = document.getElementById('videoPreview');
+  // if (videoElement) {
+  //   videoElement.src = URL.createObjectURL(newSelectedFiles[0]);
+  //   videoElement.load();
+  // }
   }
+ 
+  
   function handleRemoveFile(index) {
+
     const newPreviews = [...filePreviews];
     newPreviews.splice(index, 1);
     setFilePreviews(newPreviews);
-
     const newSelectedFiles =  [...selectedFiles];
     newSelectedFiles.splice(index, 1);
     setSelectedFiles(newSelectedFiles);
@@ -415,8 +485,17 @@ export default function ReportForm() {
           />
         </Grid>{" "}
         <Grid xs={12} container component={"fieldset"} sx={{ border: "none" }}>
-          <Grid xs={12} component={"legend"}>
+          <Grid
+            xs={12}
+            component={"legend"}
+            color={errors[""] ? theme.palette.error.main : "inherit"}
+          >
             تقدير عدد الضحايا{" "}
+            {errors[""] && (
+              <Typography color="error" fontSize={"0.75rem"}>
+                {errors[""].message}
+              </Typography>
+            )}
           </Grid>
           <Grid xs={12}>
             {" "}
@@ -599,61 +678,64 @@ export default function ReportForm() {
             cols={4}
             rowHeight={121}
           >
-            {filePreviews.map((preview, index) => (
-              <ImageListItem
-                key={index}
-                style={{
-                  position: "relative",
-                }}
-                cols={calculateColsRows(index).cols}
-                rows={calculateColsRows(index).rows}
-              >
-                {preview.type.startsWith("image/") ? (
-                  <Image
-                    src={preview.src}
-                    alt={preview.alt}
-                    fill
-                    sizes="(min-width: 808px) 50vw, 100vw"
-                    style={{
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <video
-                    width="200"
-                    height="200"
-                    controls
-                    style={{ height: "100%", width: "100%" }}
-                  >
-                    <source src={preview.src} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                )}
-                <SvgIcon
-                  sx={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    cursor: "pointer",
+            {filePreviews &&
+              filePreviews.map((preview, index) => (
+                <ImageListItem
+                  key={preview.src}
+                  style={{
+                    position: "relative",
                   }}
-                  onClick={() => handleRemoveFile(index)}
+                  cols={calculateColsRows(index).cols}
+                  rows={calculateColsRows(index).rows}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
+                  {preview.type.startsWith("image/") ? (
+                    <Image
+                      src={preview.src}
+                      alt={preview.alt}
+                      fill
+                      sizes="(min-width: 808px) 50vw, 100vw"
+                      style={{
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <video
+                      width="200"
+                      height="200"
+                      controls
+                      style={{ height: "100%", width: "100%" }}
+                    >
+                      {" "}
+                      <source src={preview.src} type={preview.type} />
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                  <SvgIcon
+                    sx={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+                      cursor: "pointer",
+                    }}
+                    
+                    onClick={() => handleRemoveFile(index)}
                   >
-                    <g transform="rotate(180 12 12)">
-                      <path
-                        fill="currentColor"
-                        d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6L6.4 19Z"
-                      />
-                    </g>
-                  </svg>
-                </SvgIcon>
-              </ImageListItem>
-            ))}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                    >
+                      <g transform="rotate(180 12 12)">
+                        <path
+                          fill="currentColor"
+                          d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6L6.4 19Z"
+                        />
+                      </g>
+                    </svg>
+                  </SvgIcon>
+                </ImageListItem>
+              ))}
           </ImageList>{" "}
         </Grid>
         <Grid xs={12}>
