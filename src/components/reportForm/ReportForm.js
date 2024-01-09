@@ -14,8 +14,8 @@ import {
   FormHelperText,
   Alert,
 } from "@mui/material";
-
-import { useState, useEffect, useRef } from "react";
+import NotificationSnackbar from "@/components/NotificationSnackbar";
+import React, { useState, useEffect, useRef,Fragment } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { schema } from "@/validation/ValidationSchema";
 import {
@@ -26,6 +26,7 @@ import {
 import axios from "axios";
 
 import ReCAPTCHA from "react-google-recaptcha";
+import Loading from "@/components/Loading";
 
 import TextInputField from "./TextInputField";
 import SelectField from "./SelectField";
@@ -156,8 +157,10 @@ export default function ReportForm() {
   const hasCasualties = watch("hasCasualties");
   const recaptchaRef = useRef(null);
   const [submitData, setSubmitData] = useState("");
-  const [pageloading, setpageLoding] = useState(false);
+  const [pageloading, setPageLoading] = useState(true);
   const [sendData, setSendData] = useState(false);
+   const [snackbarOpen, setSnackbarOpen] = useState(false);
+   const [snackbarMessage, setSnackbarMessage] = useState("");
   async function onSubmit(data) {
     setSubmitData(data);
     await recaptchaRef.current.execute();
@@ -167,7 +170,7 @@ export default function ReportForm() {
     if (!captchaCode) {
       return;
     }
-    setpageLoding(true);
+    setPageLoading(true);
     const formData = await getFormData(submitData);
     await formData.append("captcha", captchaCode);
 
@@ -181,17 +184,23 @@ export default function ReportForm() {
       });
       // إظهار رسالة نجاح أو إجراء تحويلات
       if (response.data) {
-        setpageLoding(false);
+        setPageLoading(false);
         setSendData(true);
 
         //reset();
+      }else{
+         setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
+         setPageLoading(false);
+         setSnackbarOpen(true);
+                 throw new Error("Failed to submit form data");
+
       }
-      if (!response.data) {
-        setpageLoding(false);
-        throw new Error("Failed to submit form data");
-      }
+      
     } catch (error) {
-      setpageLoding(false);
+      setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
+      setPageLoading(false);
+      setSnackbarOpen(true);
+      throw new Error("Failed to submit form data");
       // إظهار رسالة خطأ
     }
   }
@@ -260,339 +269,355 @@ export default function ReportForm() {
 
     return { cols, rows };
   }
-
+  function handleCloseSnackbar(event, reason) {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
+  }
   return (
     <Container sx={{ mt: 1, pt: 6 }}>
       {sendData ? (
         <ReportSent message={messg} reset={reset} setSuccess={setSendData} />
       ) : (
-        <Grid
-          container
-          spacing={2}
-          component={"form"}
-          onSubmit={handleSubmit(onSubmit)}
-          encType="multipart/form-data"
-          noValidate
-        >
-          {" "}
-          <TextInputField
-            name="name"
-            label="الاسم"
-            control={control}
-            errors={errors.name}
-            gridProps={{ xs: 12, sm: 4 }}
-          />
-          <TextInputField
-            name="address"
-            label="العنوان"
-            control={control}
-            errors={errors.address}
-            gridProps={{ xs: 12, sm: 8 }}
-          />
-          <TextInputField
-            name="phone"
-            label="الهاتف"
-            type="tel"
-            control={control}
-            errors={errors.phone}
-            gridProps={{ xs: 12, sm: 4 }}
-          />
-          <TextInputField
-            name="email"
-            label="البريد الإلكتروني"
-            type="email"
-            control={control}
-            errors={errors.email}
-            gridProps={{ xs: 12, sm: 4 }}
-          />
-          <Grid xs={12} sm={4}>
-            <AutocompleteField
-              name="crimeType"
-              label="نوع الجريمة"
-              options={CRIMES}
-              control={control}
-              errors={errors}
-            />
-          </Grid>{" "}
-          <TextInputField
-            name="crimeLocation"
-            label="مكان الجريمة"
-            control={control}
-            errors={errors.crimeLocation}
-            gridProps={{ xs: 12, sm: 4 }}
-          />
-          <SelectField
-            name="relation"
-            label="العلاقة بالجريمة"
-            options={RELATION_OPTIONS}
-            control={control}
-            errors={errors}
-            gridProps={{ xs: 12, sm: 4 }}
-          />
-          <Grid xs={12} sm={4}>
-            <DatePickerField
-              name="crimeDate"
-              label="تاريخ الجريمة"
-              control={control}
-              errors={errors}
-            />
-          </Grid>
-          <Grid xs={12}>
-            <AutocompleteField
-              name="responsibleParties"
-              label="الأطراف المسؤولة"
-              control={control}
-              errors={errors}
-              multiple
-            />
-          </Grid>
-          <Grid xs={12}>
-            <Controller
-              name="hasCasualties"
-              control={control}
-              defaultValue="no"
-              render={({ field, fieldState: { error } }) => (
-                <FormControl
-                  component="fieldset"
-                  id="hasCasualties"
-                  error={!!error?.message}
-                >
-                  <FormLabel component="legend">
-                    {" "}
-                    هل هناك قتلى أو جرحى أو نازحين ؟
-                  </FormLabel>
-                  <RadioGroup {...field} aria-label="hasCasualties" row>
-                    <FormControlLabel
-                      value="yes"
-                      control={<Radio />}
-                      label="نعم"
-                    />
-                    <FormControlLabel
-                      value="no"
-                      control={<Radio />}
-                      label="لا"
-                    />
-                  </RadioGroup>{" "}
-                  {error && (
-                    <FormHelperText error>{error.message}</FormHelperText>
-                  )}
-                </FormControl>
-              )}
-            />
-          </Grid>{" "}
+        <Fragment>
           <Grid
-            xs={12}
             container
-            component={"fieldset"}
-            sx={{ border: "none" }}
+            spacing={2}
+            component={"form"}
+            onSubmit={handleSubmit(onSubmit)}
+            encType="multipart/form-data"
+            noValidate
           >
-            <Grid
-              xs={12}
-              component={"legend"}
-              color={errors[""] ? theme.palette.error.main : "inherit"}
-            >
-              تقدير عدد الضحايا{" "}
+            {" "}
+            <TextInputField
+              name="name"
+              label="الاسم"
+              control={control}
+              errors={errors.name}
+              gridProps={{ xs: 12, sm: 4 }}
+            />
+            <TextInputField
+              name="address"
+              label="العنوان"
+              control={control}
+              errors={errors.address}
+              gridProps={{ xs: 12, sm: 8 }}
+            />
+            <TextInputField
+              name="phone"
+              label="الهاتف"
+              type="tel"
+              control={control}
+              errors={errors.phone}
+              gridProps={{ xs: 12, sm: 4 }}
+            />
+            <TextInputField
+              name="email"
+              label="البريد الإلكتروني"
+              type="email"
+              control={control}
+              errors={errors.email}
+              gridProps={{ xs: 12, sm: 4 }}
+            />
+            <Grid xs={12} sm={4}>
+              <AutocompleteField
+                name="crimeType"
+                label="نوع الجريمة"
+                options={CRIMES}
+                control={control}
+                errors={errors}
+              />
+            </Grid>{" "}
+            <TextInputField
+              name="crimeLocation"
+              label="مكان الجريمة"
+              control={control}
+              errors={errors.crimeLocation}
+              gridProps={{ xs: 12, sm: 4 }}
+            />
+            <SelectField
+              name="relation"
+              label="العلاقة بالجريمة"
+              options={RELATION_OPTIONS}
+              control={control}
+              errors={errors}
+              gridProps={{ xs: 12, sm: 4 }}
+            />
+            <Grid xs={12} sm={4}>
+              <DatePickerField
+                name="crimeDate"
+                label="تاريخ الجريمة"
+                control={control}
+                errors={errors}
+              />
             </Grid>
             <Grid xs={12}>
-              {" "}
-              <Controller
-                name="victims.typeOfStatistic"
+              <AutocompleteField
+                name="responsibleParties"
+                label="الأطراف المسؤولة"
                 control={control}
+                errors={errors}
+                multiple
+              />
+            </Grid>
+            <Grid xs={12}>
+              <Controller
+                name="hasCasualties"
+                control={control}
+                defaultValue="no"
                 render={({ field, fieldState: { error } }) => (
                   <FormControl
-                    id="victims.typeOfStatistic"
-                    disabled={hasCasualties === "no"}
+                    component="fieldset"
+                    id="hasCasualties"
+                    error={!!error?.message}
                   >
-                    <FormLabel>
+                    <FormLabel component="legend">
                       {" "}
-                      هل الإحصائية التي تقدمها حول عدد القتلى أو الجرحى هي
-                      إحصائية؟{" "}
+                      هل هناك قتلى أو جرحى أو نازحين ؟
                     </FormLabel>
-                    <RadioGroup
-                      {...field}
-                      aria-label="victims.typeOfStatistic"
-                      row
-                    >
+                    <RadioGroup {...field} aria-label="hasCasualties" row>
                       <FormControlLabel
-                        value="دقيقة"
+                        value="yes"
                         control={<Radio />}
-                        label="دقيقة"
+                        label="نعم"
                       />
                       <FormControlLabel
-                        value="أكثر من"
+                        value="no"
                         control={<Radio />}
-                        label="أكثر من"
+                        label="لا"
                       />
-                      <FormControlLabel
-                        value="تقريبة"
-                        control={<Radio />}
-                        label="تقريبة"
-                      />
-                    </RadioGroup>
+                    </RadioGroup>{" "}
                     {error && (
                       <FormHelperText error>{error.message}</FormHelperText>
                     )}
                   </FormControl>
                 )}
+              />
+            </Grid>{" "}
+            <Grid
+              xs={12}
+              container
+              component={"fieldset"}
+              sx={{ border: "none" }}
+            >
+              <Grid
+                xs={12}
+                component={"legend"}
+                color={errors[""] ? theme.palette.error.main : "inherit"}
+              >
+                تقدير عدد الضحايا{" "}
+              </Grid>
+              <Grid xs={12}>
+                {" "}
+                <Controller
+                  name="victims.typeOfStatistic"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl
+                      id="victims.typeOfStatistic"
+                      disabled={hasCasualties === "no"}
+                    >
+                      <FormLabel>
+                        {" "}
+                        هل الإحصائية التي تقدمها حول عدد القتلى أو الجرحى هي
+                        إحصائية؟{" "}
+                      </FormLabel>
+                      <RadioGroup
+                        {...field}
+                        aria-label="victims.typeOfStatistic"
+                        row
+                      >
+                        <FormControlLabel
+                          value="دقيقة"
+                          control={<Radio />}
+                          label="دقيقة"
+                        />
+                        <FormControlLabel
+                          value="أكثر من"
+                          control={<Radio />}
+                          label="أكثر من"
+                        />
+                        <FormControlLabel
+                          value="تقريبة"
+                          control={<Radio />}
+                          label="تقريبة"
+                        />
+                      </RadioGroup>
+                      {error && (
+                        <FormHelperText error>{error.message}</FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                />{" "}
+              </Grid>
+              <TextInputField
+                name="victims.numberOfShohada.total"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="عدد الشهداء"
+                control={control}
+                errors={errors.victims?.numberOfShohada?.total}
+                gridProps={{ xs: 4 }}
+              />{" "}
+              <TextInputField
+                name="victims.numberOfShohada.women"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="منهم نساء"
+                control={control}
+                errors={errors.victims?.numberOfShohada?.women}
+                gridProps={{ xs: 4 }}
+              />
+              <TextInputField
+                name="victims.numberOfShohada.children"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="منهم أطفال"
+                control={control}
+                errors={errors.victims?.numberOfShohada?.children}
+                gridProps={{ xs: 4 }}
+              />{" "}
+              <TextInputField
+                name="victims.numberOfInjured.total"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="عدد الجرحى"
+                control={control}
+                errors={errors.victims?.numberOfInjured?.total}
+                gridProps={{ xs: 4 }}
+              />
+              <TextInputField
+                name="victims.numberOfInjured.women"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="منهم نساء"
+                control={control}
+                errors={errors.victims?.numberOfInjured?.women}
+                gridProps={{ xs: 4 }}
+              />
+              <TextInputField
+                name="victims.numberOfInjured.children"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="منهم أطفال"
+                control={control}
+                errors={errors.victims?.numberOfInjured?.children}
+                gridProps={{ xs: 4 }}
+              />
+              <TextInputField
+                name="victims.numberOfDisplaced"
+                type="number"
+                disabled={hasCasualties === "no"}
+                label="عدد النازحين/المهجرين"
+                control={control}
+                errors={errors.victims?.numberOfDisplaced}
+                gridProps={{ xs: 12 }}
+              />{" "}
+            </Grid>{" "}
+            <TextInputField
+              name="crimeDescription"
+              multiline
+              rows={4}
+              label="وصف الجريمة"
+              control={control}
+              errors={errors.crimeDescription}
+              gridProps={{ xs: 12 }}
+            />
+            <Grid xs={6} sm={4}>
+              {" "}
+              <Controller
+                name="files"
+                control={control}
+                defaultValue={[]}
+                render={({ field }) => (
+                  <>
+                    <input
+                      accept={SUPPORTED_FORMATS}
+                      style={{ display: "none" }}
+                      id="raised-button-file"
+                      multiple
+                      type="file"
+                      onChange={(e) => {
+                        handleFileChange(e);
+                        field.onChange(e.target.files);
+                      }}
+                      ref={field.ref}
+                    />
+                    <label htmlFor="raised-button-file">
+                      <Button
+                        variant="contained"
+                        component="span"
+                        fullWidth
+                        disableElevation
+                      >
+                        رفع صور أو فيديو
+                      </Button>
+                    </label>
+                    {errors.files && (
+                      <Typography color="error" fontSize={"0.75rem"}>
+                        {errors.files.message}
+                      </Typography>
+                    )}
+                  </>
+                )}
               />{" "}
             </Grid>
-            <TextInputField
-              name="victims.numberOfShohada.total"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="عدد الشهداء"
-              control={control}
-              errors={errors.victims?.numberOfShohada?.total}
-              gridProps={{ xs: 4 }}
+            <Grid xs={12}>
+              <FileUpload
+                filePreviews={filePreviews}
+                calculateColsRows={calculateColsRows}
+                handleRemoveFile={handleRemoveFile}
+              />
+            </Grid>
+            <Grid xs={12}>
+              {" "}
+              <CheckboxField
+                control={control}
+                errors={errors.termsAndPrivacy}
+              />
+            </Grid>{" "}
+            <Grid xs={12}>
+              <Button
+                type="submit"
+                color="primary"
+                fullWidth
+                variant="contained"
+                disableElevation
+                sx={{ mt: 3, mb: 2 }}
+              >
+                إرسال البلاغ
+              </Button>{" "}
+              {Object.values(errors).length > 0 &&
+                Object.values(errors).map((error, index) => (
+                  <Typography
+                    color="error"
+                    component="span"
+                    fontSize={"0.75rem"}
+                    key={index}
+                  >
+                    {" "}
+                    {index + 1} - {error.message}
+                    <br />
+                  </Typography>
+                ))}
+            </Grid>
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              size="invisible"
+              hl="ar"
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+              onChange={onReCAPTCHAChange}
+              badge="bottomright"
             />{" "}
-            <TextInputField
-              name="victims.numberOfShohada.women"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="منهم نساء"
-              control={control}
-              errors={errors.victims?.numberOfShohada?.women}
-              gridProps={{ xs: 4 }}
-            />
-            <TextInputField
-              name="victims.numberOfShohada.children"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="منهم أطفال"
-              control={control}
-              errors={errors.victims?.numberOfShohada?.children}
-              gridProps={{ xs: 4 }}
-            />{" "}
-            <TextInputField
-              name="victims.numberOfInjured.total"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="عدد الجرحى"
-              control={control}
-              errors={errors.victims?.numberOfInjured?.total}
-              gridProps={{ xs: 4 }}
-            />
-            <TextInputField
-              name="victims.numberOfInjured.women"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="منهم نساء"
-              control={control}
-              errors={errors.victims?.numberOfInjured?.women}
-              gridProps={{ xs: 4 }}
-            />
-            <TextInputField
-              name="victims.numberOfInjured.children"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="منهم أطفال"
-              control={control}
-              errors={errors.victims?.numberOfInjured?.children}
-              gridProps={{ xs: 4 }}
-            />
-            <TextInputField
-              name="victims.numberOfDisplaced"
-              type="number"
-              disabled={hasCasualties === "no"}
-              label="عدد النازحين/المهجرين"
-              control={control}
-              errors={errors.victims?.numberOfDisplaced}
-              gridProps={{ xs: 12 }}
-            />{" "}
-          </Grid>{" "}
-          <TextInputField
-            name="crimeDescription"
-            multiline
-            rows={4}
-            label="وصف الجريمة"
-            control={control}
-            errors={errors.crimeDescription}
-            gridProps={{ xs: 12 }}
+          </Grid>
+          <NotificationSnackbar
+            open={snackbarOpen}
+            onClose={handleCloseSnackbar}
+            message={snackbarMessage}
           />
-          <Grid xs={6} sm={4}>
-            {" "}
-            <Controller
-              name="files"
-              control={control}
-              defaultValue={[]}
-              render={({ field }) => (
-                <>
-                  <input
-                    accept={SUPPORTED_FORMATS}
-                    style={{ display: "none" }}
-                    id="raised-button-file"
-                    multiple
-                    type="file"
-                    onChange={(e) => {
-                      handleFileChange(e);
-                      field.onChange(e.target.files);
-                    }}
-                    ref={field.ref}
-                  />
-                  <label htmlFor="raised-button-file">
-                    <Button
-                      variant="contained"
-                      component="span"
-                      fullWidth
-                      disableElevation
-                    >
-                      رفع صور أو فيديو
-                    </Button>
-                  </label>
-                  {errors.files && (
-                    <Typography color="error" fontSize={"0.75rem"}>
-                      {errors.files.message}
-                    </Typography>
-                  )}
-                </>
-              )}
-            />{" "}
-          </Grid>
-          <Grid xs={12}>
-            <FileUpload
-              filePreviews={filePreviews}
-              calculateColsRows={calculateColsRows}
-              handleRemoveFile={handleRemoveFile}
-            />
-          </Grid>
-          <Grid xs={12}>
-            {" "}
-            <CheckboxField control={control} errors={errors.termsAndPrivacy} />
-          </Grid>{" "}
-          <Grid xs={12}>
-            <Button
-              type="submit"
-              color="primary"
-              fullWidth
-              variant="contained"
-              disableElevation
-              sx={{ mt: 3, mb: 2 }}
-            >
-              إرسال البلاغ
-            </Button>{" "}
-            {Object.values(errors).length > 0 &&
-              Object.values(errors).map((error, index) => (
-                <Typography
-                  color="error"
-                  component="span"
-                  fontSize={"0.75rem"}
-                  key={index}
-                >
-                  {" "}
-                  {index + 1} - {error.message}
-                  <br />
-                </Typography>
-              ))}
-          </Grid>
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            size="invisible"
-            hl="ar"
-            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-            onChange={onReCAPTCHAChange}
-            badge="bottomright"
-          />{" "}
-        </Grid>
+          <Loading loading={pageloading} />
+        </Fragment>
       )}
     </Container>
   );

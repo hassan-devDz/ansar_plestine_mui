@@ -16,7 +16,7 @@ import Loading from "@/components/Loading";
 import ReportSent from "@/components/reportForm/ReportSent";
 import Grid from "@mui/material/Unstable_Grid2";
 import "dayjs/locale/ar";
-import CustomSnackbar from "@/components/CustomSnackbar";
+import NotificationSnackbar from "@/components/NotificationSnackbar";
 
 export default function ContactUs() {
   const {
@@ -64,15 +64,16 @@ export default function ContactUs() {
         await recaptchaRef.current.reset();
         //await reset();
       } else {
+        setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
         setPageLoading(false);
         setSnackbarOpen(true);
-        setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
         throw new Error("Failed to submit form data");
       }
     } catch (error) {
-      setSnackbarOpen(true);
-      setPageLoading(false);
       setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
+      setPageLoading(false);
+      setSnackbarOpen(true);
+      throw new Error("Failed to submit form data");
     }
   }
   function handleCloseSnackbar(event, reason) {
@@ -126,38 +127,37 @@ export default function ContactUs() {
               noValidate
             >
               {" "}
-                <TextInputField
-                  name="name"
-                  label="الاسم"
-                  control={control}
-                  errors={errors.name}
-                  gridProps={{ xs: 12 }}
-                />
-                <TextInputField
-                  name="email"
-                  label="البريد الإلكتروني"
-                  type="email"
-                  control={control}
-                  errors={errors.email}
-                  gridProps={{ xs: 12 }}
-                />
-                <TextInputField
-                  name="subject"
-                  label="موضوع الرسالة"
-                  control={control}
-                  errors={errors.subject}
-                  gridProps={{ xs: 12 }}
-                />
-                {" "}
-                <TextInputField
-                  name="message"
-                  multiline
-                  rows={4}
-                  label="الرسالة"
-                  control={control}
-                  errors={errors.message}
-                  gridProps={{ xs: 12 }}
-                />
+              <TextInputField
+                name="name"
+                label="الاسم"
+                control={control}
+                errors={errors.name}
+                gridProps={{ xs: 12 }}
+              />
+              <TextInputField
+                name="email"
+                label="البريد الإلكتروني"
+                type="email"
+                control={control}
+                errors={errors.email}
+                gridProps={{ xs: 12 }}
+              />
+              <TextInputField
+                name="subject"
+                label="موضوع الرسالة"
+                control={control}
+                errors={errors.subject}
+                gridProps={{ xs: 12 }}
+              />{" "}
+              <TextInputField
+                name="message"
+                multiline
+                rows={4}
+                label="الرسالة"
+                control={control}
+                errors={errors.message}
+                gridProps={{ xs: 12 }}
+              />
               <Grid xs={12}>
                 <MuiButton
                   component="button"
@@ -193,7 +193,7 @@ export default function ContactUs() {
             onChange={onReCAPTCHAChange}
             badge="bottomright"
           />
-          <CustomSnackbar
+          <NotificationSnackbar
             open={snackbarOpen}
             onClose={handleCloseSnackbar}
             message={snackbarMessage}

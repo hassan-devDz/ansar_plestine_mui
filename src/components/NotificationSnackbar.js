@@ -10,7 +10,7 @@ function SlideTransition(props) {
   return <Slide {...props} direction="up" />;
 }
 
-export default function CustomSnackbar({ open, onClose, message }) {
+export default function NotificationSnackbar({ open, onClose, message }) {
   return (
     <Snackbar
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
