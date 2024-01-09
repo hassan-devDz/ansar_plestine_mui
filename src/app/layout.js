@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
       <body>
         <ThemeRegistry>
           <Header />
-          <Box component={"main"} sx={{ py: 10 }}>
+          <Box component={"main"} sx={{ py: 10, minHeight: "calc(100vh - 67px)" }}>
             {children}
           </Box>
           <Divider />

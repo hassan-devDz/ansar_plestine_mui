@@ -1,48 +1,37 @@
-// ReportForm.js
 "use client";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Container, Typography } from "@mui/material";
-import { Suspense } from "react";
-import React,{ useState, useEffect, useRef } from "react";
-import { Controller, useForm } from "react-hook-form";
-import Link from "next/link";
 import { contactFormSchema } from "@/validation/ValidationSchema";
-import Image from "next/image";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { Container, Typography } from "@mui/material";
 import axios from "axios";
-import Backdrop from "@mui/material/Backdrop";
-import CircularProgress from "@mui/material/CircularProgress";
-import ReCAPTCHA from "react-google-recaptcha";
+import Image from "next/image";
+import Link from "next/link";
+import React, { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+
 import MuiButton from "@/components/MuiButton";
+import ReCAPTCHA from "react-google-recaptcha";
 
 import TextInputField from "@/components/reportForm/TextInputField";
-
-import "dayjs/locale/ar";
+import Loading from "@/components/Loading";
+import ReportSent from "@/components/reportForm/ReportSent";
 import Grid from "@mui/material/Unstable_Grid2";
-import Snackbar from "@mui/material/Snackbar";
-import Slide from "@mui/material/Slide";
-import MuiAlert from "@mui/material/Alert";
-
-const Alert = React.forwardRef(function Alert(props, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-function SlideTransition(props) {
-  return <Slide {...props} direction="up" />;
-}
+import "dayjs/locale/ar";
+import CustomSnackbar from "@/components/CustomSnackbar";
 
 export default function ContactUs() {
   const {
     control,
     handleSubmit,
     reset,
-
     formState: { errors },
   } = useForm({ resolver: yupResolver(contactFormSchema) });
 
   const recaptchaRef = useRef(null);
   const [submitData, setSubmitData] = useState("");
-  const [pageloading, setpageLoding] = useState(false);
+  const [pageloading, setPageLoading] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [state, setState] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   async function onSubmit(data) {
     setSubmitData(data);
     recaptchaRef.current.execute();
@@ -52,7 +41,7 @@ export default function ContactUs() {
     if (!captchaCode) {
       return;
     }
-    setpageLoding(true);
+    setPageLoading(true);
     const data = await { ...submitData, captcha: captchaCode };
 
     try {
@@ -70,98 +59,32 @@ export default function ContactUs() {
 
       // إظهار رسالة نجاح أو إجراء تحويلات
       if (response.data) {
-        setpageLoding(false);
+        setPageLoading(false);
         setShowSuccessMessage(true);
-     
-       
-       await recaptchaRef.current.reset(); 
+        await recaptchaRef.current.reset();
         //await reset();
-      }
-      if (!response.data) {
-        setpageLoding(false);
-        setState(true)
+      } else {
+        setPageLoading(false);
+        setSnackbarOpen(true);
+        setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
         throw new Error("Failed to submit form data");
       }
     } catch (error) {
-      setState(true);
-      setpageLoding(false);
-      //console.error("Error submitting form data:", error);
-      // إظهار رسالة خطأ
+      setSnackbarOpen(true);
+      setPageLoading(false);
+      setSnackbarMessage("فشل إرسال النموذج. يرجى المحاولة مرة أخرى");
     }
   }
-  const handleClose = () => {
-    setState(false);
-  };
+  function handleCloseSnackbar(event, reason) {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
+  }
   return (
     <Container sx={{ mt: 1, pt: 6 }}>
       {showSuccessMessage ? (
-        <>
-          <Grid
-            container
-            spacing={2}
-            alignItems={"center"}
-            m={"auto"}
-            maxWidth={600}
-          >
-            <Grid xs={12} sm={12} pb={10}>
-              <Image
-                src="/mailsent.svg"
-                width={434}
-                height={336}
-                style={{
-                  maxWidth: "434px",
-                  display: "block",
-                  margin: "auto",
-                  width: "100%",
-                  height: "auto",
-                }}
-                alt="تم الارسال"
-              />
-            </Grid>
-            <Grid container xs={12} sm={12}>
-              {" "}
-              <Grid xs={12}>
-                <Typography
-                  variant="body1"
-                  pb={4}
-                  fontWeight={400}
-                  color="green"
-                  textAlign="center"
-                >
-                  شكراً لتواصلكم! لقد تم إرسال رسالتكم بنجاح. سنقوم بالرد عليكم
-                  في أسرع وقت ممكن عبر البريد الإلكتروني.{" "}
-                </Typography>
-              </Grid>
-              <Grid xs={12} sm={6}>
-                <Button
-                  variant="contained"
-                  disableElevation
-                  size="large"
-                  color="primary"
-                  sx={{ width: "100%" }}
-                  onClick={() => {
-                    setShowSuccessMessage(false);
-                    reset();
-                  }}
-                >
-                  إرسال رسالة أخرى
-                </Button>{" "}
-              </Grid>
-              <Grid xs={12} sm={6}>
-                <Button
-                  variant="text"
-                  size="large"
-                  color="primary"
-                  component={Link}
-                  href="/"
-                  sx={{ width: "100%" }}
-                >
-                  العودة إلى الصفحة الرئيسية
-                </Button>
-              </Grid>{" "}
-            </Grid>
-          </Grid>
-        </>
+        <ReportSent reset={reset} setSuccess={setShowSuccessMessage} />
       ) : (
         <>
           {" "}
@@ -203,32 +126,28 @@ export default function ContactUs() {
               noValidate
             >
               {" "}
-              <Grid xs={12}>
                 <TextInputField
                   name="name"
                   label="الاسم"
                   control={control}
                   errors={errors.name}
+                  gridProps={{ xs: 12 }}
                 />
-              </Grid>
-              <Grid xs={12}>
                 <TextInputField
                   name="email"
                   label="البريد الإلكتروني"
                   type="email"
                   control={control}
                   errors={errors.email}
+                  gridProps={{ xs: 12 }}
                 />
-              </Grid>
-              <Grid xs={12}>
                 <TextInputField
                   name="subject"
                   label="موضوع الرسالة"
                   control={control}
                   errors={errors.subject}
+                  gridProps={{ xs: 12 }}
                 />
-              </Grid>
-              <Grid xs={12}>
                 {" "}
                 <TextInputField
                   name="message"
@@ -237,8 +156,8 @@ export default function ContactUs() {
                   label="الرسالة"
                   control={control}
                   errors={errors.message}
+                  gridProps={{ xs: 12 }}
                 />
-              </Grid>{" "}
               <Grid xs={12}>
                 <MuiButton
                   component="button"
@@ -274,41 +193,12 @@ export default function ContactUs() {
             onChange={onReCAPTCHAChange}
             badge="bottomright"
           />
-          <Snackbar
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            open={state}
-            onClose={handleClose}
-            TransitionComponent={SlideTransition}
-          >
-            <Alert
-              onClose={handleClose}
-              severity="error"
-              sx={{ width: "100%" }}
-            >
-              فشل الارسال يرجى المحاولة لاحقا
-            </Alert>
-          </Snackbar>
-          <Backdrop
-            sx={{
-              color: "#fff",
-              zIndex: (theme) => theme.zIndex.drawer + 1,
-              display: "flex",
-              flexDirection: "column",
-            }}
-            open={pageloading}
-          >
-            {" "}
-            <Typography
-              variant="h4"
-              pb={4}
-              fontWeight={400}
-              textAlign="center"
-              color="#fff"
-            >
-              جاري الارسال ! . يرجى الانتظار قليلاً .{" "}
-            </Typography>{" "}
-            <CircularProgress color="inherit" />
-          </Backdrop>
+          <CustomSnackbar
+            open={snackbarOpen}
+            onClose={handleCloseSnackbar}
+            message={snackbarMessage}
+          />
+          <Loading loading={pageloading} />
         </>
       )}
     </Container>

@@ -3,6 +3,8 @@ import path from "path";
 import formidable from "formidable";
 import { schema } from "@/validation/ValidationSchema";
 import { createEdgeRouter, expressWrapper } from "next-connect";
+import axios from "axios";
+import { headers } from "next/headers";
 
 /**
  * تحويل كائن FormData إلى كائن JavaScript مع التعامل مع حالة خاصة للمفتاح "responsibleParties"
@@ -62,10 +64,12 @@ function formDataToObject(form) {
 async function validateFormData(req, res, next) {
   try {
     // معالجة multipart/form-data
-    const formData = await req.formData();
+    req.data = await req.formData();
+    const formData = await req.data;
 
     // تحويل FormData إلى كائن JavaScript
     const fields = await formDataToObject(formData);
+
     // التحقق من البيانات باستخدام Yup
     await schema
       .camelCase()
@@ -83,13 +87,47 @@ async function validateFormData(req, res, next) {
 const router = createEdgeRouter();
 
 router.use(validateFormData).post(async (req, res) => {
-  return NextResponse.json(
-    {
-      message: "تم الارسال بنجاح ، شكرا لك.",
-    },
-    { status: 201 }
-  );
+  const formData = await req.data;
+
+  // إرسال البيانات إلى النقطة النهائية باستخدام axios
+  try {
+    const endpoint = `${process.env.NEXT_PUBLIC_HOST_NAME}uploads/`;
+    const localHost = "http://localhost:5000/uploads";
+    console.log(endpoint);
+    const headersList = headers();
+    const getOrigin = headersList.get("origin");
+    const response = await axios.post(endpoint, formData, {
+      headers: {
+        // "Access-Control-Allow-Origin": "*",
+
+        "Content-Type": "multipart/form-data",
+        Origin: getOrigin,
+      },
+    });
+    // تحقق من نجاح الطلب
+    if (response.status === 201) {
+      return NextResponse.json(
+        {
+          message: "تم الارسال بنجاح ، شكرا لك.",
+        },
+        { status: 201 }
+      );
+    } else {
+      console.error(`Failed to send data. Status: ${response.status}`);
+      return NextResponse.json(
+        { error: `Failed to send data. Status: ${response.status}` },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error(`Error sending data: ${error}`);
+    return NextResponse.json(
+      { error: `Error sending data: ${error.message}` },
+      { status: 500 }
+    );
+  }
 });
+
 router.handler({
   onError(error, req, res) {
     return NextResponse.json(

@@ -25,26 +25,7 @@ async function validateFormData(data) {
     );
   }
 }
-async function validateFormData1(data) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const valid = await contactFormSchema
-        .camelCase()
-        .validate(data, { abortEarly: false, stripUnknown: true });
 
-      resolve({
-        success: true,
-      });
-    } catch (error) {
-      console.log(error.value);
-      reject({
-        success: false,
-        error: error.message,
-        status: 400,
-      });
-    }
-  });
-}
 
 async function verifyCaptcha(captcha) {
   if (!captcha) {
