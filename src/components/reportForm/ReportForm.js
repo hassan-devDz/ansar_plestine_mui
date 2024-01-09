@@ -509,7 +509,7 @@ export default function ReportForm() {
             errors={errors.crimeDescription}
             gridProps={{ xs: 12 }}
           />
-          <Grid xs={12}>
+          <Grid xs={6} sm={4}>
             {" "}
             <Controller
               name="files"
@@ -534,7 +534,7 @@ export default function ReportForm() {
                       variant="contained"
                       component="span"
                       fullWidth
-                      sx={{ mt: 2 }}
+                      disableElevation
                     >
                       رفع صور أو فيديو
                     </Button>
@@ -565,10 +565,24 @@ export default function ReportForm() {
               color="primary"
               fullWidth
               variant="contained"
+              disableElevation
               sx={{ mt: 3, mb: 2 }}
             >
               إرسال البلاغ
             </Button>{" "}
+            {Object.values(errors).length > 0 &&
+              Object.values(errors).map((error, index) => (
+                <Typography
+                  color="error"
+                  component="span"
+                  fontSize={"0.75rem"}
+                  key={index}
+                >
+                  {" "}
+                  {index + 1} - {error.message}
+                  <br />
+                </Typography>
+              ))}
           </Grid>
           <ReCAPTCHA
             ref={recaptchaRef}

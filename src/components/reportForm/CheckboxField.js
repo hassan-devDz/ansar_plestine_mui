@@ -13,7 +13,7 @@ const CheckboxField = ({  control, errors,...props }) => {
         defaultValue={false}
         render={({ field }) => (
           <FormControlLabel
-          sx={{cursor:"auto"}}
+            sx={{ cursor: "auto" }}
             control={
               <Checkbox
                 {...field}
@@ -23,8 +23,14 @@ const CheckboxField = ({  control, errors,...props }) => {
             }
             label={
               <span>
-                أوافق على <Link href="/terms">شروط الخدمة</Link> و
-                <Link href="/privacy">سياسة الخصوصية</Link>
+                أوافق على{" "}
+                <Typography component={Link} color={"primary"} href="/terms">
+                  شروط الخدمة
+                </Typography>{" "}
+                و{" "}
+                <Typography component={Link} color={"primary"} href="/privacy">
+                  سياسة الخصوصية{" "}
+                </Typography>
               </span>
             }
             {...props}
